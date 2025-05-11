@@ -8,6 +8,7 @@ model_id = "BetKill1994/diploms"
 
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForSequenceClassification.from_pretrained(model_id)
+model.to("cpu")
 model.eval()
 
 # Интерфейс
