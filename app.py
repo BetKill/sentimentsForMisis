@@ -3,43 +3,50 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import matplotlib.pyplot as plt
 
-# Загрузка модели из Hugging Face Hub
-model_id = "BetKill1994/diploms"
+# Отключаем предупреждения и автообновление
+st.set_option("server.runOnSave", False)
 
+# Предзагрузка классов torch (важно для DirectML и некоторых сред)
+_ = torch.classes
+
+# Загрузка модели
+model_id = "BetKill1994/diploms"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForSequenceClassification.from_pretrained(model_id)
 model.eval()
 
+# Метки классов (важно чтобы соответствовали обучению)
+labels = ["Нейтральный", "Позитивный", "Негативный"]
+
 # Интерфейс
-st.title("Анализ тональности текста")
-text = st.text_area("Введите текст для анализа", "")
+st.title("📊 Анализ тональности текста")
+text = st.text_area("Введите текст для анализа", "", height=150)
 
-if st.button("Анализировать") and text:
-    inputs = tokenizer(
-        text,
-        return_tensors="pt",
-        truncation=True,
-        max_length=512,
-        padding=True
-    )
+if st.button("🔍 Анализировать") and text.strip():
+    with st.spinner("Анализируем..."):
+        try:
+            inputs = tokenizer(
+                text,
+                return_tensors="pt",
+                truncation=True,
+                max_length=512,
+                padding=True
+            )
 
-    try:
-        with torch.no_grad():
-            output = model(**inputs)
-            logits = output.logits
-            probs = torch.nn.functional.softmax(logits, dim=-1).squeeze().tolist()
+            with torch.no_grad():
+                output = model(**inputs)
+                logits = output.logits
+                probs = torch.nn.functional.softmax(logits, dim=-1).squeeze().tolist()
 
-        labels = ["Нейтральный", "Позитивный", "Негативный"]
-        predicted = labels[torch.argmax(logits)]
+            predicted = labels[torch.argmax(logits)]
 
-        st.markdown(f"**Предсказанная тональность:** {predicted}")
+            st.success(f"**Предсказанная тональность:** {predicted}")
 
-        fig, ax = plt.subplots()
-        ax.bar(labels, probs, color=["gray", "green", "red"])
-        ax.set_ylabel("Вероятность")
-        ax.set_title("Распределение вероятностей по классам")
-        st.pyplot(fig)
+            fig, ax = plt.subplots()
+            ax.bar(labels, probs, color=["gray", "green", "red"])
+            ax.set_ylabel("Вероятность")
+            ax.set_title("Распределение по классам")
+            st.pyplot(fig)
 
-    except Exception as e:
-        st.error(f"Произошла ошибка: {e}")
-
+        except Exception as e:
+            st.error(f"Ошибка во время анализа: {e}")
