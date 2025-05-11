@@ -9,9 +9,14 @@ _ = torch.classes
 
 # Загрузка модели
 model_id = "BetKill1994/diploms"
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForSequenceClassification.from_pretrained(model_id)
-model.eval()
+try:
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = AutoModelForSequenceClassification.from_pretrained(model_id)
+    model.eval()
+    st.success("Модель успешно загружена")
+except Exception as e:
+    st.error(f"Ошибка загрузки модели: {e}")
+
 
 # Метки классов (важно чтобы соответствовали обучению)
 labels = ["Нейтральный", "Позитивный", "Негативный"]
