@@ -15,7 +15,6 @@ st.title("Анализ тональности текста")
 text = st.text_area("Введите текст для анализа", "")
 
 if st.button("Анализировать") and text:
-    # Токенизация с ограничением длины
     inputs = tokenizer(
         text,
         return_tensors="pt",
@@ -24,18 +23,23 @@ if st.button("Анализировать") and text:
         padding=True
     )
 
-    with torch.no_grad():
-        logits = model(**inputs).logits
-        probs = torch.nn.functional.softmax(logits, dim=-1).squeeze().tolist()
+    try:
+        with torch.no_grad():
+            output = model(**inputs)
+            logits = output.logits
+            probs = torch.nn.functional.softmax(logits, dim=-1).squeeze().tolist()
 
-    labels = ["Нейтральный", "Позитивный", "Негативный"]
-    predicted = labels[torch.argmax(logits)]
+        labels = ["Нейтральный", "Позитивный", "Негативный"]
+        predicted = labels[torch.argmax(logits)]
 
-    st.markdown(f"**Предсказанная тональность:** {predicted}")
+        st.markdown(f"**Предсказанная тональность:** {predicted}")
 
-    # Визуализация
-    fig, ax = plt.subplots()
-    ax.bar(labels, probs, color=["gray", "green", "red"])
-    ax.set_ylabel("Вероятность")
-    ax.set_title("Распределение вероятностей по классам")
-    st.pyplot(fig)
+        fig, ax = plt.subplots()
+        ax.bar(labels, probs, color=["gray", "green", "red"])
+        ax.set_ylabel("Вероятность")
+        ax.set_title("Распределение вероятностей по классам")
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"Произошла ошибка: {e}")
+
