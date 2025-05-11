@@ -3,53 +3,49 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import matplotlib.pyplot as plt
 
+# Указываем устройство — обязательно CPU для Streamlit Cloud
+device = torch.device("cpu")
 
-# Предзагрузка классов torch (важно для DirectML и некоторых сред)
-_ = torch.classes
-
-# Загрузка модели
+# Загрузка модели и токенизатора с Hugging Face
 model_id = "BetKill1994/diploms"
-try:
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSequenceClassification.from_pretrained(model_id)
-    model.eval()
-    st.success("Модель успешно загружена")
-except Exception as e:
-    st.error(f"Ошибка загрузки модели: {e}")
-
-
-# Метки классов (важно чтобы соответствовали обучению)
-labels = ["Нейтральный", "Позитивный", "Негативный"]
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForSequenceClassification.from_pretrained(model_id).to(device)
+model.eval()
 
 # Интерфейс
-st.title("📊 Анализ тональности текста")
-text = st.text_area("Введите текст для анализа", "", height=150)
+st.title("Анализ тональности текста")
+text = st.text_area("Введите текст для анализа", "")
 
-if st.button("🔍 Анализировать") and text.strip():
-    with st.spinner("Анализируем..."):
-        try:
-            inputs = tokenizer(
-                text,
-                return_tensors="pt",
-                truncation=True,
-                max_length=512,
-                padding=True
-            )
+if st.button("Анализировать") and text:
+    # Токенизация текста
+    inputs = tokenizer(
+        text,
+        return_tensors="pt",
+        truncation=True,
+        max_length=512,
+        padding=True
+    )
 
-            with torch.no_grad():
-                output = model(**inputs)
-                logits = output.logits
-                probs = torch.nn.functional.softmax(logits, dim=-1).squeeze().tolist()
+    # Перенос входных данных на устройство (CPU)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
 
-            predicted = labels[torch.argmax(logits)]
+    try:
+        with torch.no_grad():
+            output = model(**inputs)
+            logits = output.logits
+            probs = torch.nn.functional.softmax(logits, dim=-1).squeeze().tolist()
 
-            st.success(f"**Предсказанная тональность:** {predicted}")
+        labels = ["Нейтральный", "Позитивный", "Негативный"]
+        predicted = labels[torch.argmax(logits)]
 
-            fig, ax = plt.subplots()
-            ax.bar(labels, probs, color=["gray", "green", "red"])
-            ax.set_ylabel("Вероятность")
-            ax.set_title("Распределение по классам")
-            st.pyplot(fig)
+        st.markdown(f"**Предсказанная тональность:** {predicted}")
 
-        except Exception as e:
-            st.error(f"Ошибка во время анализа: {e}")
+        # Отображение гистограммы вероятностей
+        fig, ax = plt.subplots()
+        ax.bar(labels, probs, color=["gray", "green", "red"])
+        ax.set_ylabel("Вероятность")
+        ax.set_title("Распределение вероятностей по классам")
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"Произошла ошибка: {e}")
