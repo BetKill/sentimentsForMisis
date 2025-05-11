@@ -3,8 +3,6 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import matplotlib.pyplot as plt
 
-# Отключаем предупреждения и автообновление
-st.set_option("server.runOnSave", False)
 
 # Предзагрузка классов torch (важно для DirectML и некоторых сред)
 _ = torch.classes
